@@ -1,160 +1,219 @@
+{{/* vim: set filetype=mustache: */}}
+
 {{/*
-Expand the name <CHARTNAME> the chart.
+Define the name of the chart/application.
 */}}
-{{- define "<CHARTNAME>.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- define "application.name" -}}
+{{- default .Release.Name .Values.applicationName | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
+If release name contains the application name it will be used as a full name.
 */}}
-{{- define "<CHARTNAME>.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- define "application.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Release.Name .Values.applicationName -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Define the version of the chart/application.
+*/}}
+{{- define "application.version" -}}
+  {{- $version := default "" .Values.image.tag -}}
+  {{- regexReplaceAll "[^a-zA-Z0-9_\\.\\-]" $version "-" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Define the namespace of the chart
+*/}}
+{{- define "application.namespace" -}}
+{{- default .Release.Namespace .Values.namespaceOverride -}}
+{{- end -}}
+
+{{/*
+Renders a value that contains template.
+Usage:
+{{ include "application.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $) }}
+*/}}
+{{- define "application.tplvalues.render" -}}
+    {{- $value := .value -}}
+    {{- if or (not $value) (kindIs "invalid" $value) -}}
+        {{- "" -}}
+    {{- else if typeIs "string" $value -}}
+        {{- tpl $value .context -}}
+    {{- else -}}
+        {{- tpl ($value | toYaml) .context -}}
+    {{- end -}}
+{{- end -}}
+
+{{/*
+Resolve chart version, allowing override for stable snapshot testing.
+See: https://github.com/helm-unittest/helm-unittest/issues/197
+*/}}
+{{- define "application.chartVersion" -}}
+{{- .Values.chartVersionOverride | default .Chart.Version -}}
+{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "<CHARTNAME>.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | trunc 63 | trimSuffix "-" }}
+{{- define "application.chart" -}}
+{{- printf "%s-%s" .Chart.Name (include "application.chartVersion" .) | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Additional common labels
+*/}}
+{{- define "application.additionalLabels" -}}
+{{- if .Values.additionalLabels }}
+{{ include "application.tplvalues.render" ( dict "value" .Values.additionalLabels "context" $ ) }}
+{{- end }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "<CHARTNAME>.commonLabels" -}}
-helm.sh/chart: {{ include "<CHARTNAME>.chart" . }}
+{{- define "application.commonLabels" -}}
+helm.sh/chart: {{ include "application.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-<CHARTNAME> labels
+Application labels
 */}}
-{{- define "<CHARTNAME>.labels" -}}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- define "application.labels" -}}
+app.kubernetes.io/name: {{ include "application.name" . }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with include "application.version" . }}
+app.kubernetes.io/version: {{ quote . }}
 {{- end }}
-{{ include "<CHARTNAME>.commonLabels" . }}
-{{ include "<CHARTNAME>.selectorLabels" . }}
+{{- if .Values.componentOverride }}
+app.kubernetes.io/component: {{ .Values.componentOverride }}
+{{- end }}
+{{- if .Values.partOfOverride }}
+app.kubernetes.io/part-of: {{ .Values.partOfOverride }}
+{{- end }}
+{{ include "application.additionalLabels" . }}
+{{ include "application.commonLabels" . }}
+{{ include "application.selectorLabels" . }}
 {{- end }}
 
 {{/*
 Selector labels
 */}}
-{{- define "<CHARTNAME>.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.name" . }}
+{{- define "application.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "application.name" . }}
 {{- end }}
 
 {{/*
 Create a name for the worker
 We truncate at 56 chars in order to provide space for the "-worker" suffix
 */}}
-{{- define "<CHARTNAME>.workerName" -}}
-{{ include "<CHARTNAME>.name" . | trunc 56 | trimSuffix "-" }}-worker
+{{- define "application.workerName" -}}
+{{ include "application.name" . | trunc 56 | trimSuffix "-" }}-worker
 {{- end }}
 
 {{/*
 Create a default fully qualified name for the worker.
 We truncate at 56 chars in order to provide space for the "-worker" suffix
 */}}
-{{- define "<CHARTNAME>.workerFullname" -}}
-{{ include "<CHARTNAME>.fullname" . | trunc 56 | trimSuffix "-" }}-worker
+{{- define "application.workerFullname" -}}
+{{ include "application.fullname" . | trunc 56 | trimSuffix "-" }}-worker
 {{- end }}
 
 {{/*
 Worker labels
 */}}
-{{- define "<CHARTNAME>.workerLabels" -}}
-{{ include "<CHARTNAME>.commonLabels" . }}
-{{ include "<CHARTNAME>.workerSelectorLabels" . }}
+{{- define "application.workerLabels" -}}
+{{ include "application.commonLabels" . }}
+{{ include "application.workerSelectorLabels" . }}
 {{- end }}
 
 {{/*
 Worker selector labels
 */}}
-{{- define "<CHARTNAME>.workerSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.workerName" . }}
+{{- define "application.workerSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "application.workerName" . }}
 {{- end }}
 
 {{/*
 Create a name for Flower
 We truncate at 56 chars in order to provide space for the "-flower" suffix
 */}}
-{{- define "<CHARTNAME>.flowerName" -}}
-{{ include "<CHARTNAME>.name" . | trunc 56 | trimSuffix "-" }}-flower
+{{- define "application.flowerName" -}}
+{{ include "application.name" . | trunc 56 | trimSuffix "-" }}-flower
 {{- end }}
 
 {{/*
 Create a default fully qualified name for Flower.
 We truncate at 56 chars in order to provide space for the "-flower" suffix
 */}}
-{{- define "<CHARTNAME>.flowerFullname" -}}
-{{ include "<CHARTNAME>.fullname" . | trunc 56 | trimSuffix "-" }}-flower
+{{- define "application.flowerFullname" -}}
+{{ include "application.fullname" . | trunc 56 | trimSuffix "-" }}-flower
 {{- end }}
 
 {{/*
 Flower labels
 */}}
-{{- define "<CHARTNAME>.flowerLabels" -}}
-{{ include "<CHARTNAME>.commonLabels" . }}
-{{ include "<CHARTNAME>.flowerSelectorLabels" . }}
+{{- define "application.flowerLabels" -}}
+{{ include "application.commonLabels" . }}
+{{ include "application.flowerSelectorLabels" . }}
 {{- end }}
 
 {{/*
 Flower selector labels
 */}}
-{{- define "<CHARTNAME>.flowerSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.flowerName" . }}
+{{- define "application.flowerSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "application.flowerName" . }}
 {{- end  }}
 
 {{/*
 Create a name for Beat
 We truncate at 56 chars in order to provide space for the "-flower" suffix
 */}}
-{{- define "<CHARTNAME>.beatName" -}}
-{{ include "<CHARTNAME>.name" . | trunc 56 | trimSuffix "-" }}-beat
+{{- define "application.beatName" -}}
+{{ include "application.name" . | trunc 56 | trimSuffix "-" }}-beat
 {{- end }}
 
 {{/*
 Create a default fully qualified name for the beat.
 We truncate at 56 chars in order to provide space for the "-worker" suffix
 */}}
-{{- define "<CHARTNAME>.beatFullname" -}}
-{{ include "<CHARTNAME>.fullname" . | trunc 56 | trimSuffix "-" }}-beat
+{{- define "application.beatFullname" -}}
+{{ include "application.fullname" . | trunc 56 | trimSuffix "-" }}-beat
 {{- end }}
 
 {{/*
 Beat labels
 */}}
-{{- define "<CHARTNAME>.beatLabels" -}}
-{{ include "<CHARTNAME>.commonLabels" . }}
-{{ include "<CHARTNAME>.beatSelectorLabels" . }}
+{{- define "application.beatLabels" -}}
+{{ include "application.commonLabels" . }}
+{{ include "application.beatSelectorLabels" . }}
 {{- end }}
 
 {{/*
 Beat selector labels
 */}}
-{{- define "<CHARTNAME>.beatSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.beatName" . }}
+{{- define "application.beatSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "application.beatName" . }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "<CHARTNAME>.serviceAccountName" -}}
+{{- define "application.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "<CHARTNAME>.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "application.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -164,52 +223,40 @@ Create the name of the service account to use
 Create a name for Config job
 We truncate at 56 chars in order to provide space for the "-config" suffix
 */}}
-{{- define "<CHARTNAME>.configName" -}}
-{{ include "<CHARTNAME>.name" . | trunc 56 | trimSuffix "-" }}-config
+{{- define "application.configName" -}}
+{{ include "application.name" . | trunc 56 | trimSuffix "-" }}-config
 {{- end }}
 
 {{/*
 Create a default fully qualified name for config.
 We truncate at 56 chars in order to provide space for the "-config" suffix
 */}}
-{{- define "<CHARTNAME>.configFullname" -}}
-{{ include "<CHARTNAME>.fullname" . | trunc 56 | trimSuffix "-" }}-config
+{{- define "application.configFullname" -}}
+{{ include "application.fullname" . | trunc 56 | trimSuffix "-" }}-config
 {{- end }}
 
 {{/*
-config labels
+Config labels
 */}}
-{{- define "<CHARTNAME>.configLabels" -}}
-{{ include "<CHARTNAME>.commonLabels" . }}
-{{ include "<CHARTNAME>.configSelectorLabels" . }}
+{{- define "application.configLabels" -}}
+{{ include "application.commonLabels" . }}
+{{ include "application.configSelectorLabels" . }}
 {{- end }}
 
 {{/*
-config selector labels
+Config selector labels
 */}}
-{{- define "<CHARTNAME>.configSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "<CHARTNAME>.configName" . }}
+{{- define "application.configSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "application.configName" . }}
 {{- end }}
 
 {{/*
 Ingress annotations
 */}}
-{{- define "<CHARTNAME>.ingress.annotations" -}}
+{{- define "application.ingress.annotations" -}}
   {{- range $key, $val := .Values.ingress.annotations }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
 {{- end }}
 
-{{/* vim: set filetype=mustache: */}}
-{{/*
-Renders a value that contains template.
-Usage:
-{{ include "<CHARTNAME>.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $) }}
-*/}}
-{{- define "<CHARTNAME>.tplvalues.render" -}}
-    {{- if typeIs "string" .value }}
-        {{- tpl .value .context }}
-    {{- else }}
-        {{- tpl (.value | toYaml) .context }}
-    {{- end }}
-{{- end -}}
+

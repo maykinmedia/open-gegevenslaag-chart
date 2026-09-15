@@ -1,15 +1,30 @@
-{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+{{- if and (.Values.persistence).enabled (not .Values.persistence.existingClaim) }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "<CHARTNAME>.fullname" . }}
+  name: {{ include "application.fullname" . }}
+  namespace: {{ template "application.namespace" . }}
   labels:
-    {{- include "<CHARTNAME>.labels" . | nindent 4 }}
+    {{- include "application.labels" . | nindent 4 }}
+    {{- if .Values.persistence.additionalLabels }}
+    {{- toYaml .Values.persistence.additionalLabels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.persistence.annotations }}
+  annotations:
+    {{- toYaml .Values.persistence.annotations | nindent 4 }}
+  {{- end }}
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: {{ .Values.persistence.storageClassName }}
+    - {{ .Values.persistence.accessMode | default "ReadWriteMany" | quote }}
   resources:
     requests:
-      storage: {{ .Values.persistence.size }}
+      storage: {{ .Values.persistence.size | quote }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+  {{- if .Values.persistence.volumeMode }}
+  volumeMode: {{ .Values.persistence.volumeMode | quote }}
+  {{- end }}
+  {{- if .Values.persistence.volumeName }}
+  volumeName: {{ .Values.persistence.volumeName | quote }}
+  {{- end }}
 {{- end }}

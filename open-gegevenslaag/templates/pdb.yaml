@@ -1,11 +1,12 @@
-{{- if .Values.pdb.create }}
+{{- if or .Values.pdb.minAvailable .Values.pdb.maxUnavailable | and .Values.pdb.enabled }}
+---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "<CHARTNAME>.fullname" . }}
-  namespace: {{ .Release.Namespace | quote }}
+  name: {{ include "application.fullname" . }}
+  namespace: {{ template "application.namespace" . }}
   labels:
-    {{- include "<CHARTNAME>.labels" . | nindent 4 }}
+    {{- include "application.labels" . | nindent 4 }}
 spec:
   {{- if .Values.pdb.minAvailable }}
   minAvailable: {{ .Values.pdb.minAvailable }}
@@ -15,5 +16,5 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "<CHARTNAME>.selectorLabels" . | nindent 6 }}
+      {{- include "application.selectorLabels" . | nindent 6 }}
 {{- end }}

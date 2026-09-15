@@ -2,12 +2,20 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "<CHARTNAME>.configName" . }}
+  name: {{ include "application.configName" . }}
   labels:
-    {{- include "<CHARTNAME>.configLabels" . | nindent 4 }}
+    {{- include "application.configLabels" . | nindent 4 }}
+    {{- if .Values.configuration.job.additionalLabels }}
+    {{- toYaml .Values.configuration.job.additionalLabels | nindent 4 }}
+    {{- end }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    {{- if .Values.configuration.job.annotations }}
+    {{- toYaml .Values.configuration.job.annotations | nindent 4 }}
+    {{- end }}
 spec:
   backoffLimit: {{ .Values.configuration.job.backoffLimit }}
-  ttlSecondsAfterFinished: {{ .Values.configuration.job.ttlSecondsAfterFinished }}
   template:
     metadata:
       annotations:
@@ -15,7 +23,7 @@ spec:
       {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "<CHARTNAME>.configLabels" . | nindent 8 }}
+        {{- include "application.configLabels" . | nindent 8 }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -24,7 +32,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "<CHARTNAME>.serviceAccountName" . }}
+      serviceAccountName: {{ include "application.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       restartPolicy: {{ .Values.configuration.job.restartPolicy }}
@@ -36,14 +44,14 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           envFrom:
             - secretRef:
-                name: {{ .Values.existingSecret | default (include "<CHARTNAME>.fullname" .) }}
+                name: {{ .Values.existingSecret | default (include "application.fullname" .) }}
             - secretRef:
-                name: {{ if .Values.existingConfigurationSecret }}{{ .Values.existingConfigurationSecret }}{{ else }}{{ .Values.configurationSecretsName | default (printf "%s-config-secret" (include "<CHARTNAME>.fullname" .)) }}{{ end }}                
+                name: {{ if .Values.existingConfigurationSecrets }}{{ .Values.existingConfigurationSecrets }}{{ else }}{{ .Values.configurationSecretsName | default (printf "%s-config-secrets" (include "application.fullname" .)) }}{{ end }}               
             - configMapRef:
-                name: {{ include "<CHARTNAME>.fullname" . }}
+                name: {{ include "application.fullname" . }}
           env:
             {{- if .Values.extraEnvVars }}
-            {{- include "<CHARTNAME>.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- include "application.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           resources:
           {{- toYaml .Values.configuration.job.resources | nindent 12 }}
@@ -56,30 +64,30 @@ spec:
           volumeMounts:
             - name: media
               mountPath: /app/private-media
-              subPath: {{ .Values.persistence.privateMediaMountSubpath | default "<CHARTNAME>/private_media" }}
+              subPath: {{ .Values.persistence.privateMediaMountSubpath | default "application/private_media" }}
             - name: media
               mountPath: /app/media
-              subPath: {{ .Values.persistence.mediaMountSubpath  | default "<CHARTNAME>/media" }}
+              subPath: {{ .Values.persistence.mediaMountSubpath  | default "application/media" }}
             - name: configuration
               mountPath: /app/configuration/
               readOnly: true
             {{- if .Values.extraVolumeMounts }}
-            {{- include "<CHARTNAME>.tplvalues.render" ( dict "value" .Values.extraVolumeMounts "context" $ ) | nindent 12 }}
+            {{- include "application.tplvalues.render" ( dict "value" .Values.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
       volumes:
         - name: media
           persistentVolumeClaim:
           {{- if .Values.persistence.enabled }}
-            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ include "<CHARTNAME>.fullname" . }}{{- end }}
+            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ include "application.fullname" . }}{{- end }}
           {{- else }}
           emptyDir: { }
           {{- end }}
         - name: configuration
           configMap:
-            name: {{ include "<CHARTNAME>.fullname" . }}-configuration
+            name: {{ include "application.fullname" . }}-configuration
             defaultMode: 0755          
         {{- if .Values.extraVolumes }}
-        {{- include "<CHARTNAME>.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $ ) | nindent 8 }}
+        {{- include "application.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $ ) | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

@@ -1,3 +1,12 @@
+applicationName: ""
+fullnameOverride: ""
+namespaceOverride: ""
+chartVersionOverride: ""
+
+additionalLabels: {}
+componentOverride: ""
+partOfOverride: ""
+
 global:
   configuration:
     enabled: false
@@ -18,56 +27,16 @@ configuration:
   job:
     # -- Run the setup configuration command as a job
     enabled: false
-    backoffLimit: 6
+    additionalLabels: {}
+    annotations: {}
+    backoffLimit: 0
     # -- 0 Will clean the job after it is finished
-    ttlSecondsAfterFinished: 0
-    restartPolicy: OnFailure
+    restartPolicy: Never
     # Note, this field is immutable
     resources: {}
+
   secrets: {}
-  # data: ""
-  # e.g.
-  # data: |-
-  #   oidc_db_config_enable: true
-  #   oidc_db_config_admin_auth:
-  #     providers:
-  #     - identifier: keycloak-provider
-  #       oidc_use_nonce: true
-  #       oidc_nonce_size: 32
-  #       oidc_state_size: 32
-  #       endpoint_config:
-  #         oidc_op_discovery_endpoint: http://keycloak.example.nl/realms/test/
-  #     items:
-  #     - identifier: admin-oidc
-  #       enabled: true
-  #       oidc_rp_client_id: testid
-  #       oidc_rp_client_secret: very-secret
-  #       oidc_rp_scopes_list:
-  #       - openid
-  #       - email
-  #       - profile
-  #       oidc_rp_sign_algo: RS256
-  #       oidc_provider_identifier: keycloak-provider
-  #       userinfo_claims_source: id_token
-  #       options:
-  #         user_settings:
-  #           claim_mappings:
-  #             username:
-  #               - sub
-  #             first_name:
-  #               - given_name
-  #             email:
-  #               - email
-  #           username_case_sensitive: true
-  #         groups_settings:
-  #           claim_mapping:
-  #             - groups
-  #           sync: true
-  #           sync_pattern: '*'
-  #           default_groups: []
-  #           make_users_staff: true
-  #           superuser_group_names:
-  #             - Superuser
+  data: ""
 
 tags:
   redis: true
@@ -75,13 +44,11 @@ tags:
 replicaCount: 2
 
 image:
-  repository: maykinmedia/<CHARTNAME>
+  repository: ""
   pullPolicy: IfNotPresent
   tag: ""
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
 
 serviceAccount:
   create: true
@@ -99,33 +66,45 @@ podSecurityContext:
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: false
   runAsNonRoot: true
   runAsUser: 1000
 
 startupProbe:
+  enabled: true
   # -- Startup probe configuration - allows up to 5 minutes for application startup
-  # -- Total time: 15s initial delay + (30 failures × 10s period) = 315s (5 minutes 15 seconds)    
+  # -- Total time: 15s initial delay + (30 failures x 10s period) = 315s (5 minutes 15 seconds)
   initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 30
-  successThreshold: 1   
+  successThreshold: 1
+  httpGet:
+    path: /admin/
+    port: http
 
 livenessProbe:
+  enabled: true
   initialDelaySeconds: 60
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 6
   successThreshold: 1
+  httpGet:
+    path: /admin/
+    port: http
 
 readinessProbe:
+  enabled: true
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 6
   successThreshold: 1
+  httpGet:
+    path: /admin/
+    port: http
 
 service:
   type: ClusterIP
@@ -139,34 +118,34 @@ ingress:
   className: ""
   # -- ingress hosts
   hosts: []
-  #  - host: <CHARTNAME>.gemeente.nl
+  #  - host: application.gemeente.nl
   #    paths:
   #      - path: /
   #        pathType: ImplementationSpecific
   tls: []
-  #  - secretName: <CHARTNAME>-tls
+  #  - secretName: application-tls
   #    hosts:
-  #      - <CHARTNAME>.gemeente.nl
+  #      - application.gemeente.nl
 
 # -- Specify extra ingresses, for example if you have multiple ingress classes
 extraIngress: []
 # e.g:
 # extraIngress:
-#  - name: <CHARTNAME>-azuregateway
+#  - name: application-azuregateway
 #    annotations:
 #      appgw.ingress.kubernetes.io/ssl-redirect: "true"
 #    className: azure-application-gateway
 #    hosts:
-#      - host: <CHARTNAME>.gemeente.nl
+#      - host: application.gemeente.nl
 #        paths:
 #          - path: /
 #            pathType: ImplementationSpecific
-#            servicename: <CHARTNAME>
+#            servicename: application
 #            portNumber: 8000
 #    tls:
-#      - secretName: <CHARTNAME>-tls
+#      - secretName: application-tls
 #        hosts:
-#          - "<CHARTNAME>.gemeente.nl"
+#          - "application.gemeente.nl"
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -186,7 +165,6 @@ autoscaling:
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
-  behaviour: {}
 
 pdb:
   create: false
@@ -201,15 +179,22 @@ affinity: {}
 
 persistence:
   enabled: true
+  existingClaim: null
+  accessMode: ReadWriteOnce
   size: 1Gi
   storageClassName: ""
-  existingClaim: null
-  mediaMountSubpath: <CHARTNAME>/media
+  volumeMode: ""
+  volumeName: ""
+  additionalLabels: {}
+  annotations: {}
+  # -- If null, use "<application.name>/media" and "<application.name>/private_media"
+  mediaMountSubpath: ""
+  privateMediaMountSubpath: ""
 
 # Existing Secret must be defined for AzureVaultSecret to work
 existingSecret: null
 # Reference to an existing secret with the values needed for django-setup-configuration
-existingConfigurationSecret: null
+existingConfigurationSecrets: null
 # If no secret already exists with the values needed for django-setup-configuration, create it with the following name
 configurationSecretsName: ""
 
@@ -248,10 +233,23 @@ extraVolumeMounts: []
 #  - name: verify-certs
 #    mountPath: /etc/ssl/certs/extra-certs/
 
+configMap:
+  additionalLabels: {}
+  annotations: {}
+  
+
+secret:
+  additionalLabels: {}
+  annotations: {}
+  files: {}
+
 settings:
   allowedHosts: ""
-  djangoSettingsModule: <CHARTNAME>.conf.docker
+  djangoSettingsModule: ""
   useXForwardedHost: false
+
+  # -- Required: dominio principale dell'applicazione
+  siteDomain: ""
 
   # -- Disable two factor authentication
   disable2fa: false
@@ -274,6 +272,17 @@ settings:
     password: ""
     name: ""
     sslmode: prefer
+    db_conn_max_age: null
+    db_pool:
+      enabled: false
+      db_pool_min_size: null
+      db_pool_max_size: null
+      db_pool_timeout: null
+      db_pool_max_waiting: null
+      db_pool_max_lifetime: null
+      db_pool_max_idle: null
+      db_pool_reconnect_timeout: null
+      db_pool_num_workers: null
 
   email:
     host: localhost
@@ -289,30 +298,69 @@ settings:
   # Cache settings, when the redis subchart is enabled these settings will be ignored and caching will default to the redis subchart services.
   cache:
     # e.g.:
-    # default: <CHARTNAME>-redis-master-0:6379/0
-    # axes: <CHARTNAME>-redis-master-0:6379/0
+    # default: myapp-redis-master-0:6379/0
+    # axes: myapp-redis-master-0:6379/0
     default: ""
     axes: ""
+    oidc: ""
 
-  # Celery cache settings, when the redis subchart is enabled these settings will be ignored and caching will default to the redis subchart services
+  # Celery settings, when the redis subchart is enabled these settings will be ignored and the broker/backend default to the redis subchart services
   celery:
     # e.g.:
-    # brokerUrl: redis://<CHARTNAME>-redis-master:6379/1
-    # resultBackend: redis://<CHARTNAME>-redis-master:6379/1
+    # brokerUrl: redis://myapp-redis-master:6379/1
+    # resultBackend: redis://myapp-redis-master:6379/1
     brokerUrl: ""
     resultBackend: ""
     logLevel: debug
+    resultExpires: ""
+
+  logging:
+    level: ""
+    requests: false
+    outgoingRequests: false
+    outgoingRequestsDBSave: false
+    outgoingRequestsDBSaveBody: false
+    outgoingRequestsResetDBSaveAfter: null
+    outgoingRequestsMaxAge: null
+
+  notifications:
+    disabled: false
+    logInDb: false
+    numberOfDaysRetained: null
+    source: ""
+
+  admin:
+    searchDisabled: false
+
+  jsonschema:
+    useFormatChecker: false
+
+  otel:
+    disabled: false
+    resourceAttributes: []
+    exporterOtlpEndpoint: ""
+    exporterOtlpMetricsInsecure: false
+    exporterOtlpProtocol: ""
+    metricExportInterval: ""
+    metricExportTimeout: ""
+
+  enableCloudEvents: false
 
   isHttps: true
 
   debug: false
 
   uwsgi:
-    master: ''
-    threads: ''
-    processes: ''
-    maxRequests: ''
-    harakiri: ''
+    master: ""
+    threads: ""
+    processes: ""
+    maxRequests: ""
+    harakiri: ""
+
+  # -- Extra keys/values
+  extraSettings: {}
+  #  CUSTOM_FEATURE_FLAG: "True"
+   #  THIRD_PARTY_API_KEY: mysecretkey
 
 worker:
   replicaCount: 2
@@ -322,15 +370,18 @@ worker:
     # requests:
     #   cpu: 250m
     #   memory: 256Mi
+  label: celery
+  queueName: ""
+  name: ""
   # Defaults to 60s
   maxWorkerLivenessDelta: ""
-  livenessProbe: 
+  livenessProbe:
     enabled: false
     exec:
       command:
-        - /app/liveness/liveness-probe.sh         
+        - /app/liveness/liveness-probe.sh
     initialDelaySeconds: 60
-    # Periodeseconds should not exceed maxWorkerLivenessDelta
+    # Periodseconds should not exceed maxWorkerLivenessDelta
     periodSeconds: 50
     timeoutSeconds: 10
     failureThreshold: 3
@@ -341,7 +392,6 @@ worker:
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 80
-    behaviour: {}
 
 flower:
   enabled: true
@@ -360,49 +410,17 @@ flower:
     failureThreshold: 6
     successThreshold: 1
   resources: {}
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
 
 beat:
   enabled: true
   replicaCount: 1
   podLabels: {}
-  livenessProbe: {}
-  readinessProbe: {}
-  resources: {}
-
-nginx:
-  image:
-    repository: nginxinc/nginx-unprivileged
-    pullPolicy: IfNotPresent
-    tag: stable
-  existingConfigmap: null
-  # extraVolumes Optionally specify extra list of additional volumes
-  # e.g:
-  # extraVolumes:
-  #   - name: tmp
-  #     emptyDir: {}
-  #
-  extraVolumes: []
-  # extraVolumeMounts Optionally specify extra list of additional volumeMounts
-  # e.g:
-  # extraVolumeMounts:
-  #   - name: tmp
-  #     mountPath: /tmp
-  extraVolumeMounts: []
-  service:
-    type: ClusterIP
-    port: 80
-    annotations: {}
-  replicaCount: 1
-  podLabels: {}
-  securityContext:
-    capabilities:
-      drop:
-      - ALL
-    readOnlyRootFilesystem: false
-    runAsNonRoot: true
-    runAsUser: 101
-  autoscaling:
-    enabled: false
   livenessProbe: {}
   readinessProbe: {}
   resources: {}

@@ -1,18 +1,28 @@
 {{- if .Values.autoscaling.enabled }}
+---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "<CHARTNAME>.fullname" . }}
+  name: {{ include "application.fullname" . }}
+  namespace: {{ template "application.namespace" . }}
   labels:
-    {{- include "<CHARTNAME>.labels" . | nindent 4 }}
+    {{- include "application.labels" . | nindent 4 }}
+    {{- if .Values.autoscaling.additionalLabels }}
+    {{- toYaml .Values.autoscaling.additionalLabels | nindent 4 }}
+    {{- end }}
+  {{- if .Values.autoscaling.annotations }}
+  annotations:
+    {{- toYaml .Values.autoscaling.annotations | nindent 4 }}
+  {{- end }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "<CHARTNAME>.fullname" . }}
+    name: {{ include "application.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
+    {{- toYaml .Values.autoscaling.metrics | nindent 4 }}
     {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
@@ -29,20 +39,28 @@ spec:
           type: Utilization
           averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
+  {{- if .Values.autoscaling.behavior }}
+  behavior:
+    {{- toYaml .Values.autoscaling.behavior | nindent 4 }}
+  {{- end }}
 {{- end }}
----
+
+
 {{- if .Values.worker.autoscaling.enabled }}
+---
+
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "<CHARTNAME>.workerFullname" . }}
+  name: {{ include "application.workerFullname" . }}
+  namespace: {{ template "application.namespace" . }}
   labels:
-    {{- include "<CHARTNAME>.workerSelectorLabels" . | nindent 4 }}
+    {{- include "application.workerSelectorLabels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "<CHARTNAME>.workerFullname" . }}
+    name: {{ include "application.workerFullname" . }}
   minReplicas: {{ .Values.worker.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.worker.autoscaling.maxReplicas }}
   metrics:
@@ -64,35 +82,3 @@ spec:
     {{- end }}
 {{- end }}
 ---
-{{- if .Values.nginx.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "<CHARTNAME>.nginxFullname" . }}
-  labels:
-    {{- include "<CHARTNAME>.nginxSelectorLabels" . | nindent 4 }}
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "<CHARTNAME>.nginxFullname" . }}
-  minReplicas: {{ .Values.nginx.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.nginx.autoscaling.maxReplicas }}
-  metrics:
-    {{- if .Values.nginx.autoscaling.targetCPUUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.nginx.autoscaling.targetCPUUtilizationPercentage }}
-    {{- end }}
-    {{- if .Values.nginx.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.nginx.autoscaling.targetMemoryUtilizationPercentage }}
-    {{- end }}
-{{- end }}
