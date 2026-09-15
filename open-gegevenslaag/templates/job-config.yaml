@@ -46,7 +46,7 @@ spec:
             - secretRef:
                 name: {{ .Values.existingSecret | default (include "application.fullname" .) }}
             - secretRef:
-                name: {{ if .Values.existingConfigurationSecrets }}{{ .Values.existingConfigurationSecrets }}{{ else }}{{ .Values.configurationSecretsName | default (printf "%s-config-secrets" (include "application.fullname" .)) }}{{ end }}               
+                name: {{ if .Values.existingConfigurationSecret }}{{ .Values.existingConfigurationSecret }}{{ else }}{{ .Values.configurationSecretsName | default (printf "%s-config-secret" (include "application.fullname" .)) }}{{ end }}                
             - configMapRef:
                 name: {{ include "application.fullname" . }}
           env:

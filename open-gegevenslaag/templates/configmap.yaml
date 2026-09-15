@@ -21,7 +21,7 @@ data:
   ENVIRONMENT: {{ .Values.settings.environment | default (include "application.fullname" .) | quote }}
   ALLOWED_HOSTS: "{{ include "application.fullname" . }},{{ include "application.fullname" . }}.{{ .Release.Namespace }},{{ .Values.settings.allowedHosts | replace " " "" | toString }}"
 
-  {{/* Redis host, computed once and reused for cache and celery */}}
+  {{/* Redis host for cache and celery */}}
   {{- $redisHost := "" }}
   {{- if .Values.tags.redis }}
   {{- $redisHost = printf "%s-master.%s" (include "common.names.fullname" .Subcharts.redis) .Release.Namespace }}
@@ -204,14 +204,6 @@ data:
   {{- if .Values.settings.otel.metricExportTimeout }}
   OTEL_METRIC_EXPORT_TIMEOUT: {{ .Values.settings.otel.metricExportTimeout | toString | quote }}
   {{- end }}
-  {{- end }}
-
-  {{/* Miscellaneous feature flags */}}
-  {{- if .Values.settings.enableCloudEvents }}
-  ENABLE_CLOUD_EVENTS: "True"
-  {{- end }}
-  {{- if .Values.settings.jsonschema.useFormatChecker }}
-  JSONSCHEMA_USE_FORMAT_CHECKER: "True"
   {{- end }}
 
   {{/* Extra application-specific settings, injected by charts that extend this generic one */}}
