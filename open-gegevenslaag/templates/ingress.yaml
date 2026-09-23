@@ -69,6 +69,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ $value.name }}
+  namespace: {{ template "application.namespace" $ }}
   labels:
     {{- include "application.labels" $ | nindent 4 }}
   {{- if $value.annotations }}
@@ -78,7 +79,9 @@ metadata:
     {{- end }}
   {{- end }}
 spec:
+  {{- if $value.className }}
   ingressClassName: {{ $value.className }}
+  {{- end }}
   {{- if $value.tls }}
   tls:
     {{- range $tlsEntry := $value.tls }}
@@ -96,7 +99,9 @@ spec:
         paths:
           {{- range $pathEntry := $hostEntry.paths }}
           - path: {{ $pathEntry.path }}
+            {{- if $pathEntry.pathType }}
             pathType: {{ $pathEntry.pathType }}
+            {{- end }}
             backend:
               service:
                 name: {{ $pathEntry.servicename }}

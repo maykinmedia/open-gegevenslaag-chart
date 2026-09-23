@@ -257,8 +257,6 @@ spec:
                 name: {{ .Values.existingSecret | default (include "application.fullname" .) }}
             - configMapRef:
                 name: {{ include "application.fullname" . }}
-            - configMapRef:
-                name: {{ include "application.fullname" . }}-worker-{{ .Values.worker.label | default "celery" }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- include "application.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
