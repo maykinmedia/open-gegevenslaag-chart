@@ -22,8 +22,12 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Files.Glob "templates/configmap.yaml" }}
+        checksum/configmap: {{ tpl (.Files.Get "templates/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Files.Glob "templates/secret.yaml" }}
+        checksum/secret: {{ tpl (.Files.Get "templates/secret.yaml") . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -47,7 +51,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default (include "application.version" .) }}"
+          image: {{ include "application.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           envFrom:
             - secretRef:
@@ -228,8 +232,12 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Files.Glob "templates/configmap.yaml" }}
+        checksum/configmap: {{ tpl (.Files.Get "templates/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Files.Glob "templates/secret.yaml" }}
+        checksum/secret: {{ tpl (.Files.Get "templates/secret.yaml") . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -250,7 +258,7 @@ spec:
         - name: {{ include "application.workerFullname" . }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default (include "application.version" .) }}"
+          image: {{ include "application.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           envFrom:
             - secretRef:
@@ -333,8 +341,12 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Files.Glob "templates/configmap.yaml" }}
+        checksum/configmap: {{ tpl (.Files.Get "templates/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Files.Glob "templates/secret.yaml" }}
+        checksum/secret: {{ tpl (.Files.Get "templates/secret.yaml") . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -355,7 +367,7 @@ spec:
         - name: {{ include "application.flowerFullname" . }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default (include "application.version" .) }}"
+          image: {{ include "application.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           command: ["/celery_flower.sh"]
           resources:

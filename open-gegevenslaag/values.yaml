@@ -89,11 +89,11 @@ replicaCount: 2
 
 image:
   # -- Container image repository (required)
-  repository: ""
+  repository: "maykinmedia/application"
   # -- Image pull policy
   pullPolicy: IfNotPresent
   # -- Image tag; defaults to .Chart.AppVersion when empty
-  tag: ""
+  tag: "0.0.0"
 
 # -- References to secrets for pulling images from private registries
 imagePullSecrets: []

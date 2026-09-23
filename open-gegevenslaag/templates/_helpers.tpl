@@ -26,11 +26,25 @@ If release name contains the application name it will be used as a full name.
 {{- end -}}
 
 {{/*
+Define the image repository.
+*/}}
+{{- define "application.repository" -}}
+{{- required "image.repository is required" .Values.image.repository -}}
+{{- end -}}
+
+{{/*
+Create the full image reference, failing if repository or tag are not set.
+*/}}
+{{- define "application.image" -}}
+{{- $tag := required "image.tag is required" .Values.image.tag -}}
+{{- printf "%s:%s" (include "application.repository" .) $tag -}}
+{{- end -}}
+
+{{/*
 Define the version of the chart/application.
 */}}
 {{- define "application.version" -}}
-  {{- $version := default "" .Values.image.tag -}}
-  {{- regexReplaceAll "[^a-zA-Z0-9_\\.\\-]" $version "-" | trunc 63 | trimSuffix "-" -}}
+{{- required "image.tag is required" .Values.image.tag | regexReplaceAll "[^a-zA-Z0-9_\\.\\-]" "-" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -92,7 +106,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Application labels
 */}}
 {{- define "application.labels" -}}
-app.kubernetes.io/name: {{ include "application.name" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with include "application.version" . }}
 app.kubernetes.io/version: {{ quote . }}
@@ -258,5 +271,3 @@ Ingress annotations
   {{ $key }}: {{ $val | quote }}
   {{- end }}
 {{- end }}
-
-
