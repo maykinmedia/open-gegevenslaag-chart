@@ -1067,6 +1067,7 @@
   "definitions": {
     "probe": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean"
@@ -1093,6 +1094,7 @@
         },
         "httpGet": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "path": {
               "type": "string"
@@ -1104,15 +1106,6 @@
               ]
             }
           }
-        },
-        "exec": {
-          "type": "object"
-        },
-        "tcpSocket": {
-          "type": "object"
-        },
-        "grpc": {
-          "type": "object"
         }
       }
     }

@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
       
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
@@ -34,6 +35,31 @@ jobs:
           helm dependencies build open-gegevenslaag
           helm lint open-gegevenslaag
   
+  unittest:
+    name: Helm unit tests
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository 
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      
+      - name: Install Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+
+      - name: Install helm-unittest
+        env:
+          # renovate: datasource=github-releases depName=helm-unittest/helm-unittest
+          HELM_UNITTEST_VERSION: v1.1.2
+        # TODO: Remove --verify=false once helm-unittest publishes signed releases
+        # Tracking: https://github.com/helm-unittest/helm-unittest/issues/362
+        run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest.git --version "$HELM_UNITTEST_VERSION"
+
+      - name: Run helm-unittest
+        run: helm unittest open-gegevenslaag
+
   zizmor:
       name: GitHub Actions Security Analysis with zizmor 🌈
       runs-on: ubuntu-latest
